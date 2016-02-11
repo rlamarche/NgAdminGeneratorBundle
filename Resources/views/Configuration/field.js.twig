@@ -8,4 +8,7 @@
 {% endif %}
     {% if view == 'edition' or view == 'show' %}
                     .isDetailLink(false){% endif %}
+{% endif %}
+    {% if field.readOnly %}
+                    .editable(false)
 {%- endif %}

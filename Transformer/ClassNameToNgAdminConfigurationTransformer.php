@@ -28,8 +28,11 @@ class ClassNameToNgAdminConfigurationTransformer implements TransformerInterface
             'fields' => [],
         ];
 
+        /**
+         * @var $jmsField PropertyMetadata
+         */
         foreach ($metadata->propertyMetadata as $jmsField) {
-            $field = ['name' => $this->namingStrategy->translateName($jmsField)];
+            $field = ['name' => $this->namingStrategy->translateName($jmsField), 'readOnly' => $jmsField->readOnly];
             $field = array_merge($field, $this->getExtraDataBasedOnType($jmsField));
 
             $entity['fields'][] = $field;
@@ -81,10 +84,13 @@ class ClassNameToNgAdminConfigurationTransformer implements TransformerInterface
                         'name' => $this->getEntityName($field->type['params'][0]['name'])
                     ],
                 ];
-
-            case 'DateTime':
+            case 'Date':
                 return [
                     'type' => 'date',
+                ];
+            case 'DateTime':
+                return [
+                    'type' => 'datetime',
                 ];
         }
 

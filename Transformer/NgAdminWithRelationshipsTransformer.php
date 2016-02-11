@@ -62,6 +62,8 @@ class NgAdminWithRelationshipsTransformer implements TransformerInterface
                     throw new \Exception('Unhandled relationship type: '.$associationMapping['type']);
             }
 
+            $transformedField['readOnly'] = $configuration['fields'][$fieldIndex]['readOnly'];
+
             $transformedConfiguration['fields'][$fieldIndex] =  $transformedField;
         }
 
