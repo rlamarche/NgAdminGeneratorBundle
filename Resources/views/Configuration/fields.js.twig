@@ -1,8 +1,7 @@
 {% for field in fields -%}
     {% if
         not (view == "creation" and field.name == "id")
-        and not (field.type == "referenced_list" and (view == "dashboard" or view == "list" or view == "creation"))
-        and not (field.readOnly and view == "edition") %}
+        and not (field.type == "referenced_list" and (view == "dashboard" or view == "list" or view == "creation")) %}
 
         {% if field.type == 'reference' %}
             {% spaceless %}{% include "marmelabNgAdminGeneratorBundle:Configuration:reference.js.twig" %}{% endspaceless %}
