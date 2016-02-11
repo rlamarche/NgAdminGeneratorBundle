@@ -8,6 +8,6 @@
                                 "view": view,
                                 "field": field,
                                 "fromReference": true
-                            } only %}{% endspaceless %}
-{%- endif %}{{ loop.last ? "" : "," }}
+                            } only %}{% endspaceless %}{{ loop.last ? "\n" : ",\n" }}
+{%- endif %}
 {% endfor %}                    ])
