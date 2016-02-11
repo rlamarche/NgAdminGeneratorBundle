@@ -46,9 +46,6 @@
                 } only %}
 {% endif %}
 
-            {{ entity.name }}.menuView()
-                .icon('<span class="glyphicon glyphicon-{{ entity.icon }}"></span>');
-
             {{ entity.name }}.dashboardView()
                 .title('Recent {{ entity.name }}')
                 .limit(5)
