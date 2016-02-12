@@ -89,13 +89,9 @@ class ClassNameToNgAdminConfigurationTransformer implements TransformerInterface
                         'name' => $this->getEntityName($field->type['params'][0]['name'])
                     ],
                 ];
-            case 'Date':
-                return [
-                    'type' => 'date',
-                ];
             case 'DateTime':
                 return [
-                    'type' => 'datetime',
+                    'type' => 'date',
                 ];
         }
 
