@@ -39,4 +39,23 @@ class ReferencedFieldGuesser
 
         return $className ? strtolower($className).'_id' : null;
     }
+
+    public function guessOneToManyReferenceField($associationMapping)
+    {
+        if (isset($associationMapping['mappedBy']))
+        {
+            // TODO use JoinColumn of target entity
+            return $associationMapping['mappedBy'];
+        }
+        else
+        {
+            $referencedClass = $associationMapping['sourceEntity'];
+
+            // @TODO: find a more reliable way to get relationship column name
+            $className = explode('\\', $referencedClass);
+            $className = end($className);
+
+            return $className ? strtolower($className) : null;
+        }
+    }
 }

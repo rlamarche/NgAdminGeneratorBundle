@@ -18,27 +18,32 @@ class ClassNameToNgAdminConfigurationTransformer implements TransformerInterface
         $this->namingStrategy = $namingStrategy;
     }
 
-    public function transform($objectDefinition)
+    public function transform($objectDefinitions)
     {
-        $metadata = $this->metadataFactory->getMetadataForClass($objectDefinition->getClass());
+        $transformedDefinitions = [];
+        foreach ($objectDefinitions as $objectDefinition) {
+            $metadata = $this->metadataFactory->getMetadataForClass($objectDefinition->getClass());
 
-        $entity = [
-            'class' => $objectDefinition->getClass(),
-            'name' => $objectDefinition->getName(),
-            'fields' => [],
-        ];
+            $entity = [
+                'class' => $objectDefinition->getClass(),
+                'name' => $objectDefinition->getName(),
+                'fields' => [],
+            ];
 
-        /**
-         * @var $jmsField PropertyMetadata
-         */
-        foreach ($metadata->propertyMetadata as $jmsField) {
-            $field = ['name' => $this->namingStrategy->translateName($jmsField), 'readOnly' => $jmsField->readOnly];
-            $field = array_merge($field, $this->getExtraDataBasedOnType($jmsField));
+            /**
+             * @var $jmsField PropertyMetadata
+             */
+            foreach ($metadata->propertyMetadata as $jmsField) {
+                $field = ['name' => $this->namingStrategy->translateName($jmsField), 'readOnly' => $jmsField->readOnly];
+                $field = array_merge($field, $this->getExtraDataBasedOnType($jmsField));
 
-            $entity['fields'][] = $field;
+                $entity['fields'][] = $field;
+            }
+
+            $transformedDefinitions[] = $entity;
         }
 
-        return $entity;
+        return $transformedDefinitions;
     }
 
     public function reverseTransform($data)
@@ -55,7 +60,7 @@ class ClassNameToNgAdminConfigurationTransformer implements TransformerInterface
                 return ['type' => 'number'];
 
             case 'string':
-                if (in_array($field->reflection->name, ['body', 'content'])) {
+                if (in_array($field->reflection->name, ['body', 'content', 'description'])) {
                     return ['type' => 'wysiwyg'];
                 }
 

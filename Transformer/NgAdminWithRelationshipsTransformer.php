@@ -18,56 +18,61 @@ class NgAdminWithRelationshipsTransformer implements TransformerInterface
         $this->referencedFieldGuesser = $referencedFieldGuesser;
     }
 
-    public function transform($configuration)
+    public function transform($entities)
     {
-        $transformedConfiguration = $configuration;
-
-        $associationMappings = $this->metadataFactory->getMetadataFor($configuration['class'])->getAssociationMappings();
-        $transformedConfiguration['has_relationships'] = (bool) count($associationMappings);
-        if (!count($associationMappings)) {
-            return $transformedConfiguration;
+        $entitiesByClass = [];
+        foreach ($entities as $data) {
+            $entitiesByClass[$data['class']] = $data;
         }
 
-        foreach ($associationMappings as $fieldName => $associationMapping) {
-            // Try to find field to modify
-            $fieldIndex = $this->getFieldIndex($configuration['fields'], $fieldName);
-            if (!$fieldIndex) {
-                // if not found, try with referenced column
-                $fieldName = $associationMapping['joinColumns'][0]['name'];
-                $fieldIndex = $this->getFieldIndex($configuration['fields'], $fieldName);
+        foreach ($entities as &$transformedConfiguration) {
+            $associationMappings = $this->metadataFactory->getMetadataFor($transformedConfiguration['class'])->getAssociationMappings();
+            $transformedConfiguration['has_relationships'] = (bool)count($associationMappings);
+            if (!count($associationMappings)) {
+                return $transformedConfiguration;
+            }
+
+            foreach ($associationMappings as $fieldName => $associationMapping) {
+                // Try to find field to modify
+                $fieldIndex = $this->getFieldIndex($transformedConfiguration['fields'], Inflector::tableize($fieldName));
                 if (!$fieldIndex) {
-                    continue;
+                    // if not found, try with referenced column
+                    $fieldName = $associationMapping['joinColumns'][0]['name'];
+                    $fieldIndex = $this->getFieldIndex($transformedConfiguration['fields'], $fieldName);
+                    if (!$fieldIndex) {
+                        continue;
+                    }
                 }
+
+                // if field exists, convert it to a more friendly format
+                switch ($associationMapping['type']) {
+                    case ClassMetadata::ONE_TO_ONE:
+                        $transformedField = $this->transformOneToOneMapping($associationMapping, $entitiesByClass);
+                        break;
+
+                    case ClassMetadata::ONE_TO_MANY:
+                        $transformedField = $this->transformOneToManyMapping($associationMapping, $entitiesByClass);
+                        break;
+
+                    case ClassMetadata::MANY_TO_ONE:
+                        $transformedField = $this->transformManyToOneMapping($associationMapping, $entitiesByClass);
+                        break;
+
+                    case ClassMetadata::MANY_TO_MANY:
+                        $transformedField = $this->transformManyToManyMapping($associationMapping, $entitiesByClass);
+                        break;
+
+                    default:
+                        throw new \Exception('Unhandled relationship type: ' . $associationMapping['type']);
+                }
+
+                $transformedField['readOnly'] = $transformedConfiguration['fields'][$fieldIndex]['readOnly'];
+
+                $transformedConfiguration['fields'][$fieldIndex] = $transformedField;
             }
-
-            // if field exists, convert it to a more friendly format
-            switch ($associationMapping['type']) {
-                case ClassMetadata::ONE_TO_ONE:
-                    $transformedField = $this->transformOneToOneMapping($associationMapping);
-                    break;
-
-                case ClassMetadata::ONE_TO_MANY:
-                    $transformedField = $this->transformOneToManyMapping($associationMapping);
-                    break;
-
-                case ClassMetadata::MANY_TO_ONE:
-                    $transformedField = $this->transformManyToOneMapping($associationMapping);
-                    break;
-
-                case ClassMetadata::MANY_TO_MANY:
-                    $transformedField = $this->transformManyToManyMapping($associationMapping);
-                    break;
-
-                default:
-                    throw new \Exception('Unhandled relationship type: '.$associationMapping['type']);
-            }
-
-            $transformedField['readOnly'] = $configuration['fields'][$fieldIndex]['readOnly'];
-
-            $transformedConfiguration['fields'][$fieldIndex] =  $transformedField;
         }
 
-        return $transformedConfiguration;
+        return $entities;
     }
 
     public function reverseTransform($configWithRelationships)
@@ -84,52 +89,52 @@ class NgAdminWithRelationshipsTransformer implements TransformerInterface
         }
     }
 
-    private function transformOneToOneMapping($associationMapping)
+    private function transformOneToOneMapping($associationMapping, $entitiesByClass)
     {
         return [
-            'name' => $associationMapping['fieldName'],
+            'name' => Inflector::tableize($associationMapping['fieldName']),
             'type' => 'reference',
             'referencedEntity' => [
-                'name' => $associationMapping['fieldName'],
+                'name' => $entitiesByClass[$associationMapping['targetEntity']]['name'],
                 'class' => $associationMapping['targetEntity']
             ],
             'referencedField' => $this->referencedFieldGuesser->guess($associationMapping['targetEntity'])
         ];
     }
 
-    private function transformOneToManyMapping($associationMapping)
+    private function transformOneToManyMapping($associationMapping, $entitiesByClass)
     {
         return [
-            'name' => $associationMapping['fieldName'],
+            'name' => Inflector::tableize($associationMapping['fieldName']),
             'type' => 'referenced_list',
             'referencedEntity' => [
-                'name' => Inflector::pluralize($associationMapping['fieldName']),
+                'name' => $entitiesByClass[$associationMapping['targetEntity']]['name'],
                 'class' => $associationMapping['targetEntity']
             ],
-            'referencedField' => $this->referencedFieldGuesser->guessTargetReferenceField($associationMapping['sourceEntity'])
+            'referencedField' => $this->referencedFieldGuesser->guessOneToManyReferenceField($associationMapping)
         ];
     }
 
-    private function transformManyToOneMapping($associationMapping)
+    private function transformManyToOneMapping($associationMapping, $entitiesByClass)
     {
         return [
-            'name' => $associationMapping['fieldName'],
+            'name' => Inflector::tableize($associationMapping['fieldName']),
             'type' => 'reference',
             'referencedEntity' => [
-                'name' => Inflector::pluralize($associationMapping['fieldName']),
+                'name' => $entitiesByClass[$associationMapping['targetEntity']]['name'],
                 'class' => $associationMapping['targetEntity']
             ],
             'referencedField' => $this->referencedFieldGuesser->guess($associationMapping['targetEntity'])
         ];
     }
 
-    private function transformManyToManyMapping($associationMapping)
+    private function transformManyToManyMapping($associationMapping, $entitiesByClass)
     {
         return [
-            'name' => $associationMapping['fieldName'],
+            'name' => Inflector::tableize($associationMapping['fieldName']),
             'type' => 'reference_many',
             'referencedEntity' => [
-                'name' => Inflector::pluralize($associationMapping['fieldName']),
+                'name' => $entitiesByClass[$associationMapping['targetEntity']]['name'],
                 'class' => $associationMapping['targetEntity']
             ],
             'referencedField' => $this->referencedFieldGuesser->guess($associationMapping['targetEntity'])

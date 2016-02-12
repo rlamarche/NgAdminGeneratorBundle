@@ -16,13 +16,15 @@ class EntityToEntityWithIconTransformer implements TransformerInterface
         $this->iconMapping = $iconMapping;
     }
 
-    public function transform($entity)
+    public function transform($entities)
     {
-        $entity['icon'] = $this->getIcon(
-            Inflector::singularize($entity['name'])
-        );
+        foreach ($entities as &$entity) {
+            $entity['icon'] = $this->getIcon(
+                Inflector::singularize($entity['name'])
+            );
+        }
 
-        return $entity;
+        return $entities;
     }
 
     public function reverseTransform($entity)

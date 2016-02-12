@@ -31,10 +31,7 @@ class ConfigurationGenerator
         foreach ($this->transformers as $transformer) {
             $inputData = count($transformedData) ? $transformedData: $objectDefinitions;
 
-            $transformedData = [];
-            foreach ($inputData as $input) {
-                $transformedData[] = $transformer->transform($input);
-            }
+            $transformedData = $transformer->transform($inputData);
         }
 
         $dataWithKeys = [];
